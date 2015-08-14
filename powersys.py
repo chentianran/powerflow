@@ -1,6 +1,12 @@
 import numpy as np
 
 
+def base(n,i,sgn=" 1"):
+    if i < 0 or i >= n:
+        return " 0 " * n
+    else:
+        return (" 0 " * i) + sgn + " " + (" 0 " * (n-1-i))
+
 class PowerFlowSystem:
 
     def __init__(self, graph):
@@ -50,3 +56,53 @@ class PowerFlowSystem:
             out.append("  " + " + ".join(gs) + " - " + Sg + ";")
         out.append("}")
         return "\n".join(out)
+
+    def supports(self):
+        out = [str(self.m) + ' ' + str(self.m)]     # dimension and supports
+
+        for i in range(1,self.n):   # for each node that is not the reference
+            sz = len(self.G.neighbors(i)) + 1 # size of the supports
+            out.append (str(sz) + " 1")
+            out.append (str(sz) + " 1")
+
+        for i in range(1,self.n):   # for each node that is not the reference
+            fs = ['']
+            gs = ['']
+            b = base(self.n-1,i-1,"-1")
+            z = base(self.n-1, -1)
+            fs.append (b + z)
+            gs.append (z + b)
+            for j in self.G.neighbors(i):
+                t = base(self.n-1,j-1)
+                fs.append (z + t)
+                gs.append (t + z)
+            out.extend (fs)
+            out.extend (gs)
+
+        return "\n".join(out)
+
+    def edge_expo(self,i,j):
+        d = self.n - 1
+        if 0 == i:
+            v = " 0 " * d
+        else:
+            v = " 0 " * (i-1) + " 1 " + " 0 " * (d -i)
+        if 0 == j:
+            u = " 0 " * d
+        else:
+            u = " 0 " * (j-1) + " 1 " + " 0 " * (d -j)
+        return v + u
+
+    def polytope(self):
+        out = [str(self.m) + ' 1']     # dimension and supports
+
+        P = set()
+        P.add (self.edge_expo(0,0)) # constant term
+        for i in range(1,self.n):   # for each node that is not the reference
+            for j in self.G.neighbors(i):
+                P.add (self.edge_expo(i,j))
+                P.add (self.edge_expo(j,i))
+        Ps = sorted(list(P), reverse=True)
+
+        d = str(self.m)
+        return  d + ' 1\n' + str(len(P)) + ' ' + d + "\n" + "\n".join(Ps)

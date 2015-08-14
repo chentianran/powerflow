@@ -6,9 +6,12 @@ import matplotlib.pyplot as plt
 import powersys
 
 to_draw = False
+to_supp = False
+to_poly = False
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "draw", "file", "supp", "sym"])
+    flags = ["help", "draw", "file", "supp", "poly", "sym"]
+    opts, args = getopt.getopt(sys.argv[1:], "h", flags)
 except getopt.GetoptError:
     usage()
     sys.exit(2)
@@ -18,6 +21,10 @@ for opt, arg in opts:
         usage()
     elif opt == "--draw":
         to_draw = True
+    elif opt == "--supp":
+        to_supp = True
+    elif opt == "--poly":
+        to_poly = True
 
 if len(args) < 1:
     exit ("no graph is given\nUsage:\n  powergen GRAPH [PARAM1 PARAM2 ...]")
@@ -34,14 +41,19 @@ try:
         print 'size:   ', mod.size
     else:
         G = mod.create_graph(args[1:])
-        if to_draw:
-            nx.draw_graphviz(G)
-            plt.show()
-        P = powersys.PowerFlowSystem(G)
-        print P.equations()
-except ImportError, err:
-    print 'Cannot load generator ' + name + ':', err
-finally:
-    f.close()
 
-#G = nx.complete_graph(n)
+        if to_draw:
+            pos = nx.spring_layout(G)
+            nx.draw(G,pos)
+            plt.show()
+
+        P = powersys.PowerFlowSystem(G)
+
+        if to_supp:
+            print P.supports()
+        elif to_poly:
+            print P.polytope()
+        else:
+            print P.equations()
+except ImportError, err:
+    print '[Error] ' + name + ':', err
